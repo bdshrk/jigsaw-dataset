@@ -263,6 +263,11 @@ def generate_piece(index):
 
 # Generate the UV coords for the piece and output
 def output_uv_data(index):
+    global current_csv_output
+    
+    # Add the index to the CSV output
+    current_csv_output += str(index) + ","
+
     # Activate edit mode so we can unwrap the mesh
     bpy.context.view_layer.objects.active.select_set(True)
     bpy.ops.object.mode_set(mode="EDIT")
@@ -343,10 +348,6 @@ def output_uv_data(index):
     uv_offset_x = random.uniform(0.0, 1.0 - uv_x_size)
     uv_offset_y = random.uniform(0.0, 1.0 - uv_y_size)
 
-    # Create the associated output file
-    file = open(current_output_path + str(index) + ".csv", "w")
-    file.write("corner,corner_x,corner_y\n")
-
     # Currently found corners
     corner_count = 0
 
@@ -366,17 +367,20 @@ def output_uv_data(index):
                 # Remove it from the list to prevent overlapping corners where the duplicated pieces meet.
                 corner_xys.remove(loop.vert.co.xy)
 
-                # Log it to the file
-                file.write(str(corner_count) + ",")
+                # Log it to the CSV output
                 corner_count += 1
-                file.write(str(loop[uv_layer].uv.x) + ",")
-                file.write(str(loop[uv_layer].uv.y) + "\n")
+                current_csv_output += str(loop[uv_layer].uv.x) + ","
+                
+                # Add a new line at the end if all corners have been found
+                if corner_count != 4:
+                    current_csv_output += str(loop[uv_layer].uv.y) + ","
+                else:
+                    current_csv_output += str(loop[uv_layer].uv.y) + "\n"
 
     # Applies the UV that was editied in the bmesh back to the original object
     bmesh.update_edit_mesh(bpy.context.active_object.data)
 
-    # Close the file and return to object mode
-    file.close()
+    # Return to object mode
     bpy.ops.object.mode_set(mode="OBJECT")
 
 # Returns the scene/collection to original settings so the script can repeat correctly
@@ -439,6 +443,20 @@ def render(index):
     bpy.context.scene.render.filepath = current_output_path + str(index) + ".png"
     bpy.ops.render.render(write_still = True)
 
+# Write corner output to CSV
+def write_csv():
+    # Create the associated output file
+    file = open(current_output_path + "data.csv", "w")
+    
+    # Write headers
+    file.write("piece_id,corner_1_x,corner_1_y,corner_2_x,corner_2_y,corner_3_x,corner_3_y,corner_4_x,corner_4_y\n")
+    
+    # Write piece data...
+    file.write(current_csv_output)
+    
+    # Close file.
+    file.close()
+
 # Begin execution here...
 # Create the output path if it doesn't exist
 if not os.path.exists(output_path):
@@ -478,7 +496,11 @@ images_per_base = int(input())
 
 # For-loop to coordinate the process
 current_output_path = ""
+current_csv_output = ""
 for base_index in range(0, len(input_base_images)):
+    # Reset CSV output
+    current_csv_output = ""
+
     # Set the base image for this batch
     bpy.data.images["baseimage"].filepath = input_base_images[base_index]
     bpy.data.images["baseimage"].reload()
@@ -506,3 +528,6 @@ for base_index in range(0, len(input_base_images)):
 
         # Then clean up...
         clean_up()
+    
+    # Write CSV
+    write_csv()
