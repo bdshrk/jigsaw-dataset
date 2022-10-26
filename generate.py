@@ -8,10 +8,11 @@ import shutil
 
 # Paths and directories
 base_path = os.getcwd()
-output_path = base_path + "/Output/"
-input_base_images_path = base_path + "/Materials/Base"
-input_floor_images_path = base_path + "/Materials/Floor"
-fallback_material_path = input_floor_images_path + "/fallback/"
+output_path = os.path.join(base_path, "Output")
+input_path_materials = os.path.join(base_path, "Materials")
+input_base_images_path = os.path.join(input_path_materials, "Base")
+input_floor_images_path = os.path.join(input_path_materials, "Floor")
+fallback_material_path = os.path.join(input_floor_images_path, "fallback")
 
 # Clear selection before starting script
 bpy.ops.object.select_all(action="DESELECT")
@@ -123,7 +124,7 @@ def apply_to_floor(index, property):
         bpy.data.images[property].filepath = input_floor_images[index][property]
     else:
         # If the texture has no such property, use a fallback
-        bpy.data.images[property].filepath = fallback_material_path + property
+        bpy.data.images[property].filepath = os.path.join(fallback_material_path, property)
     
     # Reload the image from the updated filepath
     bpy.data.images[property].reload()
@@ -430,23 +431,23 @@ def floor_get_from_path(path, property, dict):
     new_dict = dict
 
     # Check for both JPGs and PNGs.
-    if (os.path.exists(path + property + ".jpg")):
-        new_dict[property] = path + property + ".jpg"
-    if (os.path.exists(path + property + ".png")):
-        new_dict[property] = path + property + ".png"
+    if (os.path.exists(os.path.join(path, property + ".jpg"))):
+        new_dict[property] = os.path.join(path, property + ".jpg")
+    if (os.path.exists(os.path.join(path, property + ".png"))):
+        new_dict[property] = os.path.join(path, property + ".png")
 
     return new_dict
 
 # Renders the scene to a file
 def render(index):
     # Set the filepath and render a single frame
-    bpy.context.scene.render.filepath = current_output_path + str(index) + ".png"
+    bpy.context.scene.render.filepath = os.path.join(current_output_path, str(index) + ".png")
     bpy.ops.render.render(write_still = True)
 
 # Write corner output to CSV
 def write_csv():
     # Create the associated output file
-    file = open(current_output_path + "data.csv", "w")
+    file = open(os.path.join(current_output_path, "data.csv"), "w")
     
     # Write headers
     file.write("piece_id,corner_1_x,corner_1_y,corner_2_x,corner_2_y,corner_3_x,corner_3_y,corner_4_x,corner_4_y\n")
@@ -465,9 +466,9 @@ if not os.path.exists(output_path):
 # Get all input images as paths
 input_base_images = []
 for image in os.listdir(input_base_images_path):
-    if os.path.isdir(input_base_images_path + "/" + image):
+    if os.path.isdir(os.path.join(input_base_images_path, image)):
         continue
-    input_base_images.append(input_base_images_path + "/" + image)
+    input_base_images.append(os.path.join(input_base_images_path, image))
 
 # Get all floor texture files as paths inside dictionaries
 input_floor_images = []
@@ -477,7 +478,7 @@ for image_index in os.listdir(input_floor_images_path):
         continue
 
     # Get the path to the current floor folder
-    floor_path_full = input_floor_images_path + "/" + image_index + "/"
+    floor_path_full = os.path.join(input_floor_images_path, image_index)
 
     # Populate the dictionary with valid texture properties
     temp_dict = {}
@@ -506,14 +507,14 @@ for base_index in range(0, len(input_base_images)):
     bpy.data.images["baseimage"].reload()
 
     # Set the correct output path for renders and CSVs
-    current_output_path = output_path + str(base_index) + "/"
+    current_output_path = os.path.join(output_path, str(base_index))
 
     # Make it if it doesn't exist
     if not os.path.exists(current_output_path):
         os.makedirs(current_output_path)
 
     # Copy the base file to the output directory with an appropriate name
-    shutil.copyfile(input_base_images[base_index], current_output_path + "base.jpg")
+    shutil.copyfile(input_base_images[base_index], os.path.join(current_output_path, "base.jpg"))
 
     # Begin generation loop...
     for count in range(0, images_per_base):
