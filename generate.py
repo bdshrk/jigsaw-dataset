@@ -69,33 +69,35 @@ piece_specular_range = [0.05, 0.2]
 
 # Randomise the environment
 def random_env():
-    # Sun rotation/angle
-    sun.rotation_euler.x = math.radians(random.uniform(-sun_rotation_limit_degrees, sun_rotation_limit_degrees))
-    sun.rotation_euler.y = math.radians(random.uniform(-sun_rotation_limit_degrees, sun_rotation_limit_degrees))
-    sun.rotation_euler.z = math.radians(random.uniform(-sun_rotation_limit_degrees, sun_rotation_limit_degrees))
+    if enable_lighting:
+        # Sun rotation/angle
+        sun.rotation_euler.x = math.radians(random.uniform(-sun_rotation_limit_degrees, sun_rotation_limit_degrees))
+        sun.rotation_euler.y = math.radians(random.uniform(-sun_rotation_limit_degrees, sun_rotation_limit_degrees))
+        sun.rotation_euler.z = math.radians(random.uniform(-sun_rotation_limit_degrees, sun_rotation_limit_degrees))
 
-    # Sun energy and sun SPREAD angle (not direction, it controls shadow sharpness)
-    sun.data.energy = random.uniform(sun_energy_range[0], sun_energy_range[1])
-    sun.data.angle = random.uniform(sun_spread_angle_range_degrees[0], sun_spread_angle_range_degrees[1])
+        # Sun energy and sun SPREAD angle (not direction, it controls shadow sharpness)
+        sun.data.energy = random.uniform(sun_energy_range[0], sun_energy_range[1])
+        sun.data.angle = random.uniform(sun_spread_angle_range_degrees[0], sun_spread_angle_range_degrees[1])
 
-    # Random light tint to simulate different lighting conditions
-    # Generate 3 random numbers as RGB and average them with the light's default color (white)
-    light_random_tint = [random.random(), random.random(), random.random()]
-    for i in range(0, 3):
-        sun.data.color[i] = (sun.data.color[i] + light_random_tint[i]) / 2
+        # Random light tint to simulate different lighting conditions
+        # Generate 3 random numbers as RGB and average them with the light's default color (white)
+        light_random_tint = [random.random(), random.random(), random.random()]
+        for i in range(0, 3):
+            sun.data.color[i] = (sun.data.color[i] + light_random_tint[i]) / 2
 
-    # Random location of camera
-    camera.location.x += random.uniform(-camera_location_random, camera_location_random)
-    camera.location.y += random.uniform(-camera_location_random, camera_location_random)
-    camera.location.z += random.uniform(-camera_location_random, camera_location_random)
+    if enable_camera_randomness:
+        # Random location of camera
+        camera.location.x += random.uniform(-camera_location_random, camera_location_random)
+        camera.location.y += random.uniform(-camera_location_random, camera_location_random)
+        camera.location.z += random.uniform(-camera_location_random, camera_location_random)
 
-    # Random rotation of camera
-    camera.rotation_euler.x += math.radians(random.uniform(-camera_rotation_random, camera_rotation_random))
-    camera.rotation_euler.y += math.radians(random.uniform(-camera_rotation_random, camera_rotation_random))
-    camera.rotation_euler.z += math.radians(random.uniform(-camera_rotation_random, camera_rotation_random))
+        # Random rotation of camera
+        camera.rotation_euler.x += math.radians(random.uniform(-camera_rotation_random, camera_rotation_random))
+        camera.rotation_euler.y += math.radians(random.uniform(-camera_rotation_random, camera_rotation_random))
+        camera.rotation_euler.z += math.radians(random.uniform(-camera_rotation_random, camera_rotation_random))
 
-    # Random camera focal length
-    camera.data.lens = random.uniform(camera_lens[0], camera_lens[1])
+        # Random camera focal length
+        camera.data.lens = random.uniform(camera_lens[0], camera_lens[1])
 
     # Move to randomise the floor
     random_floor()
@@ -494,6 +496,25 @@ for image_index in os.listdir(input_floor_images_path):
 # Begin user input
 print("Images per base: (there are " + str(len(input_base_images)) + " bases)")
 images_per_base = int(input())
+
+# Query using lighting
+print("Use lighting? (y/n)")
+enable_lighting = True if str(input()).lower().startswith("y") else False
+
+# Remove lighting if needed
+if not enable_lighting:
+    sun.hide_set(True)
+    sun.hide_render = True
+    
+    # Adjust exposure for no lighting
+    bpy.context.scene.view_settings.exposure = 4.5
+    
+    # Disable compositing for a raw image
+    bpy.context.scene.use_nodes = False
+
+# Query random camera
+print("Use random camera? (y/n)")
+enable_camera_randomness = True if str(input()).lower().startswith("y") else False
 
 # For-loop to coordinate the process
 current_output_path = ""
