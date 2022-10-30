@@ -67,6 +67,11 @@ piece_solidify_thickness_range = [0.15, 0.35]
 piece_bevel_thickness_range = [0.05, 0.1]
 piece_specular_range = [0.05, 0.2]
 
+# Global config options
+enable_camera_randomness = True
+enable_lighting = True
+enable_base_image_copy = False
+
 # Randomise the environment
 def random_env():
     if enable_lighting:
@@ -133,9 +138,8 @@ def apply_to_floor(index, property):
 
 # Randomise global variables
 def randomise():
-    global piece_overall_scale
-    global piece_end_scale
-    global piece_image_size
+    global piece_overall_scale, piece_end_scale, piece_image_size
+
     piece_overall_scale = random.uniform(piece_scale_range[0], piece_scale_range[1])
     piece_end_scale = random.uniform(piece_end_scale_range[0], piece_end_scale_range[1])
     piece_image_size = random.uniform(piece_image_size_range[0], piece_image_size_range[1])
@@ -267,6 +271,9 @@ def generate_piece(index):
 # Generate the UV coords for the piece and output
 def output_uv_data(index):
     global current_csv_output
+
+    # Add base image to CSV
+    current_csv_output += current_image_filename + ","
     
     # Add the index to the CSV output
     current_csv_output += str(index) + ","
@@ -452,13 +459,54 @@ def write_csv():
     file = open(os.path.join(current_output_path, "data.csv"), "w")
     
     # Write headers
-    file.write("piece_id,corner_1_x,corner_1_y,corner_2_x,corner_2_y,corner_3_x,corner_3_y,corner_4_x,corner_4_y\n")
+    file.write("base_path,piece_id,corner_1_x,corner_1_y,corner_2_x,corner_2_y,corner_3_x,corner_3_y,corner_4_x,corner_4_y\n")
     
     # Write piece data...
     file.write(current_csv_output)
     
     # Close file.
     file.close()
+
+# User input common config options
+def user_configure():
+    global enable_lighting, enable_camera_randomness
+
+    # Query using lighting
+    print("Use lighting? (y/n)")
+    enable_lighting = True if str(input()).lower().startswith("y") else False
+
+    # Remove lighting if needed
+    if not enable_lighting:
+        sun.hide_set(True)
+        sun.hide_render = True
+        
+        # Adjust exposure for no lighting
+        bpy.context.scene.view_settings.exposure = 4.5
+        
+        # Disable compositing for a raw image
+        bpy.context.scene.use_nodes = False
+
+    # Query random camera
+    print("Use random camera? (y/n)")
+    enable_camera_randomness = True if str(input()).lower().startswith("y") else False
+
+# Ready output variables
+def ready_output():
+    global current_output_path, current_csv_output, current_image_filename
+    current_output_path = ""
+    current_csv_output = ""
+    current_image_filename = ""
+
+# Apply the base image to the piece
+def set_base_image(base_image_path):
+    global current_image_filename
+
+    # Set image filename for CSV
+    current_image_filename = os.path.basename(base_image_path)
+
+    # Set the base image
+    bpy.data.images["baseimage"].filepath = base_image_path
+    bpy.data.images["baseimage"].reload()
 
 # Begin execution here...
 # Create the output path if it doesn't exist
@@ -494,62 +542,86 @@ for image_index in os.listdir(input_floor_images_path):
     input_floor_images.append(temp_dict)
 
 # Begin user input
-print("Images per base: (there are " + str(len(input_base_images)) + " bases)")
-images_per_base = int(input())
+print("Select generation mode:\n 1.\tGenerate X images per base\n 2.\tGenerate X images using random bases")
+generation_mode = int(input())
 
-# Query using lighting
-print("Use lighting? (y/n)")
-enable_lighting = True if str(input()).lower().startswith("y") else False
+if generation_mode == 1:
+    print("Images per base: (there are " + str(len(input_base_images)) + " bases)")
+    images_per_base = int(input())
 
-# Remove lighting if needed
-if not enable_lighting:
-    sun.hide_set(True)
-    sun.hide_render = True
+    user_configure()
+
+    print("Copy base image to output? (y/n)")
+    enable_base_image_copy = True if str(input()).lower().startswith("y") else False
+
+    ready_output()
+
+    # For-loop to coordinate the process
+    for base_index in range(0, len(input_base_images)):
+        # Reset CSV output
+        current_csv_output = ""
+
+        set_base_image(input_base_images[base_index])
+
+        # Set the correct output path for renders and CSVs
+        current_output_path = os.path.join(output_path, str(base_index))
+
+        # Make it if it doesn't exist
+        if not os.path.exists(current_output_path):
+            os.makedirs(current_output_path)
+
+        # Copy the base file to the output directory with an appropriate name
+        if enable_base_image_copy:
+            shutil.copyfile(input_base_images[base_index], os.path.join(current_output_path, "base.jpg"))
+
+        # Begin generation loop...
+        for count in range(0, images_per_base):
+            # Randomise...
+            random_env()
+
+            # Then generate the piece...
+            generate_piece(count)
+
+            # Then render...
+            render(count)
+
+            # Then clean up...
+            clean_up()
+        
+        # Write CSV
+        write_csv()
     
-    # Adjust exposure for no lighting
-    bpy.context.scene.view_settings.exposure = 4.5
-    
-    # Disable compositing for a raw image
-    bpy.context.scene.use_nodes = False
+elif generation_mode == 2:
+    print("Total number of images to generate:")
+    images_total = int(input())
 
-# Query random camera
-print("Use random camera? (y/n)")
-enable_camera_randomness = True if str(input()).lower().startswith("y") else False
-
-# For-loop to coordinate the process
-current_output_path = ""
-current_csv_output = ""
-for base_index in range(0, len(input_base_images)):
-    # Reset CSV output
-    current_csv_output = ""
-
-    # Set the base image for this batch
-    bpy.data.images["baseimage"].filepath = input_base_images[base_index]
-    bpy.data.images["baseimage"].reload()
+    user_configure()
+    ready_output()
 
     # Set the correct output path for renders and CSVs
-    current_output_path = os.path.join(output_path, str(base_index))
+    current_output_path = output_path
 
     # Make it if it doesn't exist
     if not os.path.exists(current_output_path):
         os.makedirs(current_output_path)
 
-    # Copy the base file to the output directory with an appropriate name
-    shutil.copyfile(input_base_images[base_index], os.path.join(current_output_path, "base.jpg"))
+    # For-loop to coordinate the process
+    for index in range(images_total):
+        # Choose random base image
+        random_image = random.choice(input_base_images)
+        set_base_image(random_image)
 
-    # Begin generation loop...
-    for count in range(0, images_per_base):
         # Randomise...
         random_env()
 
         # Then generate the piece...
-        generate_piece(count)
+        generate_piece(index)
 
         # Then render...
-        render(count)
+        render(index)
 
         # Then clean up...
         clean_up()
-    
+        
     # Write CSV
     write_csv()
