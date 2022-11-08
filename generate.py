@@ -43,29 +43,85 @@ modifier_positions = [
     [1.4, 0, 0]
 ]
 
-# Random variables used in multiple methods
+# Random variables used in multiple methods, automatically modified at runtime.
 piece_overall_scale = 0
 piece_end_scale = 0
-piece_image_size = 0
 
-# Random limits
+# ENVIRONMENT RANDOM LIMITS
+# =========================
+# Sun rotation in degrees on XYZ between this and -this.
+# 0 for no rotation. Values 180 or above will cause unrealistic shadows.
 sun_rotation_limit_degrees = 50
+
+# Sun light intensity randomised between these two values.
+# Values below 3.5 result in a very dark image.
+# Values above 8.0 result in an overblown image.
 sun_energy_range = [4.5, 6.0]
+
+# Sun spread angle randomness in degrees. Low/high bounds.
+# Sun spread angle is how much the shadow diffuses based on the distance from the shadercaster.
+# Lower values result in sharper shadows.
 sun_spread_angle_range_degrees = [0.25, 1.0]
+
+# Random camera offset from -value to value.
+# For reference, an unmodified jigsaw piece will have a width and height of 2.
 camera_location_random = 0.25
+
+# Random rotation of the camera in XYZ between -value and value in degrees.
 camera_rotation_random = 2.5
+
+# Random camera focal length in mm between min and max value.
+# Standard phones have a focal length between 24.0mm and 28.0mm.
+# https://thesmartphonephotographer.com/smartphone-camera-focal-length/
 camera_lens = [24.0, 28.0]
+
+# Floor scale between min and max.
+# Has the effect of changing the size of the background texture.
+# Lower values may result in the edges of the floor plane being visible.
 floor_scale_range = [0.75, 1.5]
-piece_scale_range = [0.05, 0.15]
+
+# JIGSAW PIECE RANDOM LIMITS
+# ==========================
+# Allowed sizes of the image texture on the jigsaw piece.
+# Larger values result in the image being larger on the piece.
+# E.g. 0.05 results in each piece having 5% of the total image.
+piece_image_scale_range = [0.05, 0.15]
+
+# Piece connector (ins and outs) scale between min and max.
+# Values too large or small will cause vertex errors!
 piece_end_scale_range = [0.75, 1.25]
-piece_image_size_range = [10, 60]
-piece_warp_location_randomness = 0.25
-piece_warp_scale_randomness = 0.125
+
+# Adjusts the position of all warp modifiers between -value and value.
+# Larger values result in more extreme and often unrealistic pieces.
+# Smaller values result in more generic pieces.
+piece_warp_location_randomness = 0.1
+
+# Same as above, but for warp scale instead of position.
+# This mainly effects the connectors rather than the corners.
+# Largers values give more extreme connector size variation, etc...
+piece_warp_scale_randomness = 0.1
+
+# Chance for a side NOT to be an edge (between 0 and 1)
 piece_type_cutoff_edge = 0.9
+
+# If a side is not an edge, this is the chance for it to be an in or out connector.
+# Larger values favour inward connectors.
 piece_type_cutoff_inward = 0.5
+
+# Thickness of the jigsaw piece in units between min and max.
 piece_solidify_thickness_range = [0.15, 0.35]
+
+# Thickness of the jigsaw piece's bevel between min and max.
+# Larger values result in more distortion around the edges of the piece.
 piece_bevel_thickness_range = [0.05, 0.1]
+
+# Piece specular range between min and max.
+# Adjusts the specular value of the jigsaw piece's material.
+# Largers values make the piece more glossy (shine spot from the light source.)
+# Lower values make it more matte.
 piece_specular_range = [0.05, 0.2]
+
+# END RANDOM LIMITS
 
 # Global config options
 enable_camera_randomness = True
@@ -138,11 +194,10 @@ def apply_to_floor(index, property):
 
 # Randomise global variables
 def randomise():
-    global piece_overall_scale, piece_end_scale, piece_image_size
+    global piece_overall_scale, piece_end_scale
 
-    piece_overall_scale = random.uniform(piece_scale_range[0], piece_scale_range[1])
+    piece_overall_scale = random.uniform(piece_image_scale_range[0], piece_image_scale_range[1])
     piece_end_scale = random.uniform(piece_end_scale_range[0], piece_end_scale_range[1])
-    piece_image_size = random.uniform(piece_image_size_range[0], piece_image_size_range[1])
 
 # Generate the whole piece from the piece section
 def generate_piece(index):
@@ -172,12 +227,12 @@ def generate_piece(index):
         modifier_froms[i].location = modifier_positions[i]
 
         # Set the 'target location' empties position to a random location relative to the 'original'
-        modifier_tos[i].location.x = modifier_positions[i][0] + (random.random() * piece_warp_location_randomness)
-        modifier_tos[i].location.y = modifier_positions[i][1] + (random.random() * piece_warp_location_randomness)
+        modifier_tos[i].location.x = modifier_positions[i][0] + (random.uniform(-piece_warp_location_randomness, piece_warp_location_randomness))
+        modifier_tos[i].location.y = modifier_positions[i][1] + (random.uniform(-piece_warp_location_randomness, piece_warp_location_randomness))
         
         # Also randomise scale
-        modifier_tos[i].scale.x = piece_end_scale + (random.random() * piece_warp_scale_randomness)
-        modifier_tos[i].scale.y = piece_end_scale + (random.random() * piece_warp_scale_randomness)
+        modifier_tos[i].scale.x = piece_end_scale + (random.uniform(-piece_warp_scale_randomness, piece_warp_scale_randomness))
+        modifier_tos[i].scale.y = piece_end_scale + (random.uniform(-piece_warp_scale_randomness, piece_warp_scale_randomness))
         
         # Create a warp modifier, configure the settings, and add it to the piece
         modifier = piece.modifiers.new(name="Warp", type="WARP")
