@@ -47,6 +47,12 @@ modifier_positions = [
 piece_overall_scale = 0
 piece_end_scale = 0
 
+# Output resolution. X by Y.
+# Jigsaw piece will remain centered regardless of resolution.
+# Resolutions with extreme ratios will cause the edge of the floor to become visible.
+# For phone camera pictures, use a 16:9 ratio vertically, e.g. [1080, 1920]
+render_resolution = [512, 512]
+
 # ENVIRONMENT RANDOM LIMITS
 # =========================
 # Sun rotation in degrees on XYZ between this and -this.
@@ -504,6 +510,14 @@ def floor_get_from_path(path, property, dict):
 
 # Renders the scene to a file
 def render(index):
+    # Set resolution
+    bpy.context.scene.render.resolution_x = render_resolution[0]
+    bpy.context.scene.render.resolution_y = render_resolution[1]
+
+    # Move camera to keep piece at constant size regardless of resolution
+    move_back_mult = (max(render_resolution[0], render_resolution[1]) / min(render_resolution[0], render_resolution[1])) - 1
+    camera.location.z += (3 * move_back_mult)
+
     # Set the filepath and render a single frame
     bpy.context.scene.render.filepath = os.path.join(current_output_path, str(index) + ".png")
     bpy.ops.render.render(write_still = True)
