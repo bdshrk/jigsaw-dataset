@@ -206,7 +206,7 @@ def randomise():
     piece_end_scale = random.uniform(piece_end_scale_range[0], piece_end_scale_range[1])
 
 # Generate the whole piece from the piece section
-def generate_piece(index):
+def generate_piece(piece_id):
     global modifier_tos
     global modifier_froms
     global pieces
@@ -310,7 +310,7 @@ def generate_piece(index):
     bpy.context.view_layer.objects.active.location = [0,0,0]
 
     # Calculate the UV data for the piece and output it to a file
-    output_uv_data(index)
+    output_uv_data(piece_id)
 
     # Create a solidify modifier to give the piece some thickness
     modifier = bpy.context.view_layer.objects.active.modifiers.new(name="Solidify", type="SOLIDIFY")
@@ -330,14 +330,14 @@ def generate_piece(index):
     piece.material_slots[0].material.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value = random.uniform(piece_specular_range[0], piece_specular_range[1])
 
 # Generate the UV coords for the piece and output
-def output_uv_data(index):
+def output_uv_data(piece_id):
     global current_csv_output
 
     # Add base image to CSV
-    current_csv_output += current_image_filename + ","
+    current_csv_output += current_image_id + ".jpg" + ","
     
-    # Add the index to the CSV output
-    current_csv_output += str(index) + ","
+    # Add the piece id to the CSV output
+    current_csv_output += str(piece_id) + ","
 
     # Activate edit mode so we can unwrap the mesh
     bpy.context.view_layer.objects.active.select_set(True)
@@ -509,7 +509,7 @@ def floor_get_from_path(path, property, dict):
     return new_dict
 
 # Renders the scene to a file
-def render(index):
+def render(piece_id):
     # Set resolution
     bpy.context.scene.render.resolution_x = render_resolution[0]
     bpy.context.scene.render.resolution_y = render_resolution[1]
@@ -519,13 +519,13 @@ def render(index):
     camera.location.z += (3 * move_back_mult)
 
     # Set the filepath and render a single frame
-    bpy.context.scene.render.filepath = os.path.join(current_output_path, str(index) + ".png")
+    bpy.context.scene.render.filepath = os.path.join(output_path, piece_id + ".png")
     bpy.ops.render.render(write_still = True)
 
 # Write corner output to CSV
 def write_csv():
     # Create the associated output file
-    file = open(os.path.join(current_output_path, "data.csv"), "w")
+    file = open(os.path.join(output_path, "data.csv"), "w")
     
     # Write headers
     file.write("base_path,piece_id,corner_1_x,corner_1_y,corner_2_x,corner_2_y,corner_3_x,corner_3_y,corner_4_x,corner_4_y\n")
@@ -561,10 +561,10 @@ def user_configure():
 
 # Ready output variables
 def ready_output():
-    global current_output_path, current_csv_output, current_image_filename
-    current_output_path = ""
+    global current_csv_output, current_image_filename, current_image_id
     current_csv_output = ""
     current_image_filename = ""
+    current_image_id = ""
 
 # Apply the base image to the piece
 def set_base_image(base_image_path):
@@ -627,38 +627,34 @@ if generation_mode == 1:
 
     # For-loop to coordinate the process
     for base_index in range(0, len(input_base_images)):
-        # Reset CSV output
-        current_csv_output = ""
 
         set_base_image(input_base_images[base_index])
-
-        # Set the correct output path for renders and CSVs
-        current_output_path = os.path.join(output_path, str(base_index))
-
-        # Make it if it doesn't exist
-        if not os.path.exists(current_output_path):
-            os.makedirs(current_output_path)
+        current_image_id = str(base_index) + "-base"
 
         # Copy the base file to the output directory with an appropriate name
         if enable_base_image_copy:
-            shutil.copyfile(input_base_images[base_index], os.path.join(current_output_path, "base.jpg"))
+            shutil.copyfile(input_base_images[base_index], os.path.join(output_path, current_image_id + ".jpg"))
+
 
         # Begin generation loop...
         for count in range(0, images_per_base):
             # Randomise...
             random_env()
 
+            # Id of piece: base id num - count of piece
+            piece_id = str(base_index) + "-" + str(count) + "-piece"
+
             # Then generate the piece...
-            generate_piece(count)
+            generate_piece(piece_id)
 
             # Then render...
-            render(count)
+            render(piece_id)
 
             # Then clean up...
             clean_up()
         
-        # Write CSV
-        write_csv()
+    # Write CSV
+    write_csv()
     
 elif generation_mode == 2:
     print("Total number of images to generate:")
@@ -667,27 +663,24 @@ elif generation_mode == 2:
     user_configure()
     ready_output()
 
-    # Set the correct output path for renders and CSVs
-    current_output_path = output_path
-
-    # Make it if it doesn't exist
-    if not os.path.exists(current_output_path):
-        os.makedirs(current_output_path)
-
     # For-loop to coordinate the process
     for index in range(images_total):
         # Choose random base image
         random_image = random.choice(input_base_images)
         set_base_image(random_image)
+        current_image_id = current_image_filename
 
         # Randomise...
         random_env()
 
+        # Id of piece: base id num - count of piece
+        piece_id = str(index) + "-piece"
+
         # Then generate the piece...
-        generate_piece(index)
+        generate_piece(piece_id)
 
         # Then render...
-        render(index)
+        render(piece_id)
 
         # Then clean up...
         clean_up()
