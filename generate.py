@@ -641,7 +641,7 @@ if generation_mode == 1:
             # Randomise...
             random_env()
 
-            # Id of piece: base id num - count of piece
+            # Create id for piece
             piece_id = str(base_index) + "-" + str(count) + "-piece"
 
             # Then generate the piece...
@@ -673,7 +673,7 @@ elif generation_mode == 2:
         # Randomise...
         random_env()
 
-        # Id of piece: base id num - count of piece
+        # Create id for piece
         piece_id = str(index) + "-piece"
 
         # Then generate the piece...
