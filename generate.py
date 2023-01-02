@@ -133,6 +133,7 @@ piece_specular_range = [0.05, 0.2]
 enable_camera_randomness = True
 enable_lighting = True
 enable_base_image_copy = False
+enable_random_rotation_of_piece = False
 
 # Randomise the environment
 def random_env():
@@ -390,8 +391,9 @@ def output_uv_data(piece_id):
             # Fix flipped x-axis images
             loop[uv_layer].uv.x *= -1
 
-    # Give the piece's image a random rotation
-    bmesh.ops.rotate(bm, cent=[0.5, 0.5, 0.5], matrix=mathutils.Matrix.Rotation(math.radians(random.random() * 360), 3, "Z"))
+    if enable_random_rotation_of_piece:
+        # Give the piece's image a random rotation
+        bmesh.ops.rotate(bm, cent=[0.5, 0.5, 0.5], matrix=mathutils.Matrix.Rotation(math.radians(random.random() * 360), 3, "Z"))
 
     # At this point, the UV is still in the center of the base
     # Create an AABB (axis-aligned bounding box) for calculating maximum UV movement
@@ -541,7 +543,7 @@ def write_csv():
 
 # User input common config options
 def user_configure():
-    global enable_lighting, enable_camera_randomness
+    global enable_lighting, enable_camera_randomness, enable_random_rotation_of_piece
 
     # Query using lighting
     print("Use lighting? (y/n)")
@@ -561,6 +563,10 @@ def user_configure():
     # Query random camera
     print("Use random camera? (y/n)")
     enable_camera_randomness = True if str(input()).lower().startswith("y") else False
+
+    # Query random rotation of piece
+    print("Use random rotation of piece picture? (y/n)")
+    enable_random_rotation_of_piece = True if str(input()).lower().startswith("y") else False
 
 # Ready output variables
 def ready_output():
