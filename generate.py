@@ -386,6 +386,9 @@ def output_uv_data(piece_id):
             # Apply generated scale for piece
             loop[uv_layer].uv.x *= piece_overall_scale
             loop[uv_layer].uv.y *= piece_overall_scale
+            
+            # Fix flipped x-axis images
+            loop[uv_layer].uv.x *= -1
 
     # Give the piece's image a random rotation
     bmesh.ops.rotate(bm, cent=[0.5, 0.5, 0.5], matrix=mathutils.Matrix.Rotation(math.radians(random.random() * 360), 3, "Z"))
