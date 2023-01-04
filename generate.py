@@ -31,11 +31,11 @@ modifier_tos = []
 # Stores positions in (x, y, z) of each modifier's starting position
 modifier_positions = [
     # Corners
-    [1,1,0],
-    [1,-1,0],
-    [-1,-1,0],
-    [-1,1,0],
-    
+    [1, 1, 0],
+    [1, -1, 0],
+    [-1, -1, 0],
+    [-1, 1, 0],
+
     # In/out connectors
     [0, -1.4, 0],
     [0, 1.4, 0],
@@ -135,6 +135,7 @@ enable_lighting = True
 enable_base_image_copy = False
 enable_random_rotation_of_piece = False
 
+
 # Randomise the environment
 def random_env():
     if enable_lighting:
@@ -170,6 +171,7 @@ def random_env():
     # Move to randomise the floor
     random_floor()
 
+
 # Randomise the floor scale, rotation, and texture
 def random_floor():
     # Choose a random image...
@@ -187,6 +189,7 @@ def random_floor():
     floor_scale = random.uniform(floor_scale_range[0], floor_scale_range[1])
     floor.scale = [floor_scale, floor_scale, 1]
 
+
 # Apply a 'property' to the floor texture
 # Property refers to "color", "normal", "roughness", etc...
 def apply_to_floor(index, property):
@@ -195,9 +198,10 @@ def apply_to_floor(index, property):
     else:
         # If the texture has no such property, use a fallback
         bpy.data.images[property].filepath = os.path.join(fallback_material_path, property)
-    
+
     # Reload the image from the updated filepath
     bpy.data.images[property].reload()
+
 
 # Randomise global variables
 def randomise():
@@ -205,6 +209,7 @@ def randomise():
 
     piece_overall_scale = random.uniform(piece_image_scale_range[0], piece_image_scale_range[1])
     piece_end_scale = random.uniform(piece_end_scale_range[0], piece_end_scale_range[1])
+
 
 # Generate the whole piece from the piece section
 def generate_piece(piece_id):
@@ -229,7 +234,7 @@ def generate_piece(piece_id):
         # Place the objects in the world
         bpy.context.collection.objects.link(modifier_froms[i])
         bpy.context.collection.objects.link(modifier_tos[i])
-        
+
         # Set the 'original location' empty's position to the position as declared in the modifier_positions list.
         modifier_froms[i].location = modifier_positions[i]
 
@@ -253,13 +258,13 @@ def generate_piece(piece_id):
         # Create a copy of the object and place it in the list
         new_piece = piece.copy()
         pieces.append(new_piece)
-        
+
         # Copy over the object data
         new_piece.data = piece.data.copy()
 
         # Set the rotation
         new_piece.rotation_euler[2] = math.radians(i * 90)
-        
+
         # Create a mask modifier that will show and hide different vertex groups
         modifier = new_piece.modifiers.new(name="Mask " + str(i), type="MASK")
         modifier.use_smooth = True
@@ -281,7 +286,7 @@ def generate_piece(piece_id):
 
         # Set the result in the mask modifier
         modifier.vertex_group = type_index
-        
+
         # Add the piece section to the scene
         bpy.context.collection.objects.link(new_piece)
 
@@ -289,7 +294,7 @@ def generate_piece(piece_id):
         # Needs to be applied otherwise the name will conflict with modifiers from other pieces when joined.
         bpy.context.view_layer.objects.active = new_piece
         bpy.ops.object.modifier_apply(modifier="Mask " + str(i))
-        
+
         # Set the piece as selected (needed for 'join' later)
         new_piece.select_set(True)
 
@@ -308,7 +313,7 @@ def generate_piece(piece_id):
     # Recalculate the origin (where 0,0,0 is) based on the center of mass of the randomised piece
     bpy.ops.object.origin_set(type="ORIGIN_CENTER_OF_MASS")
     # Center the object
-    bpy.context.view_layer.objects.active.location = [0,0,0]
+    bpy.context.view_layer.objects.active.location = [0, 0, 0]
 
     # Calculate the UV data for the piece and output it to a file
     output_uv_data(piece_id)
@@ -330,13 +335,14 @@ def generate_piece(piece_id):
     # Give the piece a random specular value (emulate the glossy finish)
     piece.material_slots[0].material.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value = random.uniform(piece_specular_range[0], piece_specular_range[1])
 
+
 # Generate the UV coords for the piece and output
 def output_uv_data(piece_id):
     global current_csv_output
 
     # Add base image to CSV
     current_csv_output += current_image_id + ".jpg" + ","
-    
+
     # Add the piece id to the CSV output
     current_csv_output += str(piece_id) + ","
 
@@ -387,7 +393,7 @@ def output_uv_data(piece_id):
             # Apply generated scale for piece
             loop[uv_layer].uv.x *= piece_overall_scale
             loop[uv_layer].uv.y *= piece_overall_scale
-            
+
             # Fix flipped x-axis images
             loop[uv_layer].uv.x *= -1
 
@@ -397,7 +403,7 @@ def output_uv_data(piece_id):
 
     # At this point, the UV is still in the center of the base
     # Create an AABB (axis-aligned bounding box) for calculating maximum UV movement
-    uv_min_x = 9999 # UV coords are between 0 and 1 anyway
+    uv_min_x = 9999  # UV coords are between 0 and 1 anyway
     uv_min_y = 9999
     uv_max_x = -9999
     uv_max_y = -9999
@@ -414,7 +420,7 @@ def output_uv_data(piece_id):
                 uv_max_x = loop[uv_layer].uv.x
             if uv_max_y < loop[uv_layer].uv.y:
                 uv_max_y = loop[uv_layer].uv.y
-    
+
     # Get the size of the AABB
     uv_x_size = (uv_max_x - uv_min_x)
     uv_y_size = (uv_max_y - uv_min_y)
@@ -427,6 +433,8 @@ def output_uv_data(piece_id):
     # Currently found corners
     corner_count = 0
 
+    coords_for_csv = []
+
     # Move the whole UV to the randomised offset and record the corner UV positions
     for face in bm.faces:
         for loop in face.loops:
@@ -437,27 +445,44 @@ def output_uv_data(piece_id):
             # Add random offset
             loop[uv_layer].uv.x += uv_offset_x
             loop[uv_layer].uv.y += uv_offset_y
-            
+
             # If the UV is a corner...
             if loop.vert.co.xy in corner_xys:
                 # Remove it from the list to prevent overlapping corners where the duplicated pieces meet.
                 corner_xys.remove(loop.vert.co.xy)
 
-                # Log it to the CSV output
                 corner_count += 1
-                current_csv_output += str(loop[uv_layer].uv.x) + ","
-                
-                # Add a new line at the end if all corners have been found
-                if corner_count != 4:
-                    current_csv_output += str(loop[uv_layer].uv.y) + ","
-                else:
-                    current_csv_output += str(loop[uv_layer].uv.y) + "\n"
 
-    # Applies the UV that was editied in the bmesh back to the original object
+                # Save cords for csv output
+                coords_for_csv.append((loop[uv_layer].uv.x, loop[uv_layer].uv.y))
+
+                # When have all the corners log them to the CSV output
+                if corner_count == 4:
+                    # Sort so that bottom left and top left in first half of list
+                    coords_for_csv.sort()
+
+                    # Put bottom left before top left
+                    if coords_for_csv[0][1] > coords_for_csv[1][1]:
+                        coords_for_csv[0], coords_for_csv[1] = coords_for_csv[1], coords_for_csv[0]
+
+                    # Put top right before bottom right
+                    if coords_for_csv[2][1] < coords_for_csv[3][1]:
+                        coords_for_csv[2], coords_for_csv[3] = coords_for_csv[3], coords_for_csv[2]
+
+                    # Add cords to csv output
+                    for x, y in coords_for_csv:
+                        if corner_count > 1:
+                            current_csv_output += str(x) + "," + str(y) + ","
+                        else:
+                            current_csv_output += str(x) + "," + str(y) + "\n"
+                        corner_count -= 1
+
+    # Applies the UV that was edited in the bmesh back to the original object
     bmesh.update_edit_mesh(bpy.context.active_object.data)
 
     # Return to object mode
     bpy.ops.object.mode_set(mode="OBJECT")
+
 
 # Returns the scene/collection to original settings so the script can repeat correctly
 def clean_up():
@@ -477,12 +502,12 @@ def clean_up():
 
     # Reset randomised values to defaults
     floor.rotation_euler.z = 0
-    floor.scale = [1,1,1]
-    camera.location = [0,0,3]
-    camera.rotation_euler = [0,0,0]
+    floor.scale = [1, 1, 1]
+    camera.location = [0, 0, 3]
+    camera.rotation_euler = [0, 0, 0]
     camera.data.lens = 25.0
-    sun.rotation_euler = [0,0,0]
-    sun.data.color = [1,1,1]
+    sun.rotation_euler = [0, 0, 0]
+    sun.data.color = [1, 1, 1]
     sun.data.energy = 5
     sun.data.angle = 0.526
 
@@ -501,6 +526,7 @@ def clean_up():
     modifier_froms.clear()
     pieces.clear()
 
+
 # Check if a texture exists for a given property and return it inside a dictionary
 def floor_get_from_path(path, property, dict):
     new_dict = dict
@@ -512,6 +538,7 @@ def floor_get_from_path(path, property, dict):
         new_dict[property] = os.path.join(path, property + ".png")
 
     return new_dict
+
 
 # Renders the scene to a file
 def render(piece_id):
@@ -525,21 +552,23 @@ def render(piece_id):
 
     # Set the filepath and render a single frame
     bpy.context.scene.render.filepath = os.path.join(output_path, piece_id + ".png")
-    bpy.ops.render.render(write_still = True)
+    bpy.ops.render.render(write_still=True)
+
 
 # Write corner output to CSV
 def write_csv():
     # Create the associated output file
     file = open(os.path.join(output_path, "data.csv"), "w")
-    
+
     # Write headers
     file.write("base_path,piece_id,corner_1_x,corner_1_y,corner_2_x,corner_2_y,corner_3_x,corner_3_y,corner_4_x,corner_4_y\n")
     
     # Write piece data...
     file.write(current_csv_output)
-    
+
     # Close file.
     file.close()
+
 
 # User input common config options
 def user_configure():
@@ -553,10 +582,10 @@ def user_configure():
     if not enable_lighting:
         sun.hide_set(True)
         sun.hide_render = True
-        
+
         # Adjust exposure for no lighting
         bpy.context.scene.view_settings.exposure = 4.5
-        
+
         # Disable compositing for a raw image
         bpy.context.scene.use_nodes = False
 
@@ -568,12 +597,14 @@ def user_configure():
     print("Use random rotation of piece picture? (y/n)")
     enable_random_rotation_of_piece = True if str(input()).lower().startswith("y") else False
 
+
 # Ready output variables
 def ready_output():
     global current_csv_output, current_image_filename, current_image_id
     current_csv_output = ""
     current_image_filename = ""
     current_image_id = ""
+
 
 # Apply the base image to the piece
 def set_base_image(base_image_path):
@@ -585,6 +616,7 @@ def set_base_image(base_image_path):
     # Set the base image
     bpy.data.images["baseimage"].filepath = base_image_path
     bpy.data.images["baseimage"].reload()
+
 
 # Begin execution here...
 # Create the output path if it doesn't exist
@@ -644,7 +676,6 @@ if generation_mode == 1:
         if enable_base_image_copy:
             shutil.copyfile(input_base_images[base_index], os.path.join(output_path, current_image_id + ".jpg"))
 
-
         # Begin generation loop...
         for count in range(0, images_per_base):
             # Randomise...
@@ -661,10 +692,10 @@ if generation_mode == 1:
 
             # Then clean up...
             clean_up()
-        
+
     # Write CSV
     write_csv()
-    
+
 elif generation_mode == 2:
     print("Total number of images to generate:")
     images_total = int(input())
@@ -693,6 +724,6 @@ elif generation_mode == 2:
 
         # Then clean up...
         clean_up()
-        
+
     # Write CSV
     write_csv()
