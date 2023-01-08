@@ -561,7 +561,7 @@ def write_csv():
     file = open(os.path.join(output_path, "data.csv"), "w")
 
     # Write headers
-    file.write("base_path,piece_id,corner_1_x,corner_1_y,corner_2_x,corner_2_y,corner_3_x,corner_3_y,corner_4_x,corner_4_y\n")
+    file.write("base_path,piece_id,lower_left_x,lower_left_y,top_left_x,top_left_y,top_right_x,top_right_y,bottom_right_x,bottom_right_y\n")
     
     # Write piece data...
     file.write(current_csv_output)
